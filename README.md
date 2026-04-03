@@ -86,7 +86,7 @@ cd server
 python -m venv venv
 
 # Activate (Windows)
-.\venv\Scripts\activate
+\venv\Scripts\activate
 
 # Activate (macOS/Linux)
 source venv/bin/activate
