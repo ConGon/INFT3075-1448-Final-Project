@@ -39,8 +39,18 @@
             type="text"
             placeholder="Type your prompt here..."
             class="w-full px-3 py-2 rounded bg-[#0c0e17] text-on-surface focus:outline-none focus:ring-2 focus:ring-purple-500"
+            @keyup.enter="updateAI"
           />
         </div>
+
+        <!-- Ask Button -->
+        <button
+          @click="updateAI"
+          :disabled="loading || !selectedAgent || !userPrompt"
+          class="w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold tracking-widest text-sm uppercase transition-all duration-200"
+        >
+          {{ loading ? 'Thinking...' : 'Ask' }}
+        </button>
 
       </div>
 
@@ -55,14 +65,23 @@
     <!-- Crystal Ball -->
     <div class="crystal-ball animate-float relative z-10">
       <div class="inner-glow"></div>
+
+      <!-- Loading spinner -->
+      <div v-if="loading" class="loading-ring"></div>
+
+      <!-- AI Text -->
       <div
+        v-else
         ref="aiTextRef"
         class="text-center text-purple-400 font-bold select-none"
         style="line-height: 1.05; padding: 0 12px;"
       >
-        <template v-for="(line, index) in formattedLines" :key="index">
-          <div>{{ line }}</div>
+        <template v-if="aiText">
+          <template v-for="(line, index) in formattedLines" :key="index">
+            <div>{{ line }}</div>
+          </template>
         </template>
+        <span v-else class="text-white/20 text-sm font-normal">awaiting query…</span>
       </div>
     </div>
 
@@ -70,12 +89,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, nextTick, computed } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick, computed } from 'vue'
 import { store, setAgents, setProfiles } from './ProfileStore.js'
 
 const selectedProfile = ref('')
 const selectedAgent = ref('')
 const userPrompt = ref('')
+const loading = ref(false)
 
 const profiles = computed(() => store.profiles)
 const agents = computed(() => store.agents)
@@ -99,14 +119,16 @@ const aiText = ref('')
 const aiTextRef = ref(null)
 
 async function updateAI() {
+  if (!selectedAgent.value || !userPrompt.value) return
   const agent = store.agents.find(a => a.id === selectedAgent.value)
   if (!agent) return
+  loading.value = true
   try {
     const res = await fetch('http://localhost:8000/run-agent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        personality: agent.name,
+        personality: agent.personality || agent.name,
         instructions: agent.instructions || '',
         task: userPrompt.value
       })
@@ -115,11 +137,10 @@ async function updateAI() {
     aiText.value = data.result
   } catch (err) {
     aiText.value = 'Error contacting AI'
+  } finally {
+    loading.value = false
   }
 }
-
-// Update AI every 3 seconds
-setInterval(updateAI, 3000)
 
 // Fit font inside crystal ball
 function fitFont() {
@@ -150,6 +171,7 @@ function toggleSettings() {
 }
 
 const formattedLines = computed(() => {
+  if (!aiText.value) return []
   const words = aiText.value.split(' ')
   const lines = []
   let currentLine = []
@@ -169,7 +191,10 @@ const formattedLines = computed(() => {
 </script>
 
 <style scoped>
-.settings-drawer { transition: transform 0.6s cubic-bezier(0.4,0,0.2,1); transform: translateY(calc(-100%+48px)); }
+.settings-drawer {
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateY(calc(-100% + 48px)); /* FIX: spaces around + */
+}
 .settings-drawer.is-open { transform: translateY(0); }
 .settings-handle { height:48px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
 
@@ -183,6 +208,15 @@ const formattedLines = computed(() => {
 .inner-glow { position:absolute; width:80%; height:80%; background:radial-gradient(circle, rgba(126,81,255,0.2) 0%, rgba(0,227,253,0.15) 70%); filter:blur(20px); }
 @keyframes float { 0%,100%{transform:translateY(0);}50%{transform:translateY(-15px);} }
 .animate-float { animation:float 6s ease-in-out infinite; }
+
+.loading-ring {
+  width: 40px; height: 40px; border-radius: 50%;
+  border: 2px solid rgba(126,81,255,0.2);
+  border-top-color: rgba(126,81,255,0.8);
+  animation: spin 0.9s linear infinite;
+  position: relative; z-index: 2;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 select,input { outline:none; border:1px solid rgba(255,255,255,0.2); }
 select:focus,input:focus { border-color:#7e51ff; box-shadow:0 0 0 2px rgba(126,81,255,0.3); }
