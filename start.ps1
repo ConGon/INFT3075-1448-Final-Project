@@ -5,8 +5,29 @@ $venvPath = "$backendPath\venv"
 $ollamaPort = 11434
 $modelName = "deepseek-r1:8b"
 
-# ---------- KILL EXISTING PROCESSES ----------
-Write-Host "Stopping any running backend, frontend, and Ollama processes..."
+# ---------- FUNCTION TO ENSURE PORT IS FREE ----------
+function Free-Port {
+    param($Port)
+    do {
+        $connections = netstat -aon | findstr ":$Port"
+        if ($connections) {
+            $pids = $connections | ForEach-Object { ($_ -split "\s+")[-1] } | Select-Object -Unique
+            foreach ($p in $pids) {
+                Write-Host "Stopping process on port $Port (PID $p)..."
+                try {
+                    taskkill /PID $p /F | Out-Null
+                    Write-Host "Process $p terminated."
+                } catch {
+                    Write-Warning "Could not kill PID $p. Run PowerShell as Administrator."
+                }
+            }
+            Start-Sleep -Seconds 2
+        }
+    } while ($connections)
+}
+
+# ---------- KILL EXISTING BACKEND AND FRONTEND ----------
+Write-Host "Stopping any running backend and frontend processes..."
 
 # Kill backend (uvicorn)
 Get-Process -Name "python" -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "*uvicorn*" } | ForEach-Object {
@@ -20,20 +41,13 @@ Get-Process -Name "node" -ErrorAction SilentlyContinue | ForEach-Object {
     Stop-Process -Id $_.Id -Force
 }
 
-# Kill Ollama if port is in use
-$connections = netstat -aon | findstr ":$ollamaPort"
-if ($connections) {
-    $pids = $connections | ForEach-Object { ($_ -split "\s+")[-1] } | Select-Object -Unique
-    foreach ($p in $pids) {
-        Write-Host "Stopping Ollama process on port $ollamaPort (PID $p)..."
-        taskkill /PID $p /F
-    }
-}
+# ---------- FREE THE OLLAMA PORT ----------
+Write-Host "Ensuring Ollama port $ollamaPort is free..."
+Free-Port -Port $ollamaPort
 
 # ---------- START OLLAMA ----------
 Write-Host "Starting Ollama in a separate CMD window..."
-$ollamaCmd = 'cmd.exe /c start cmd /k "ollama serve"'
-Invoke-Expression $ollamaCmd
+Start-Process cmd.exe -ArgumentList "/c start cmd /k `"ollama serve`"" -WindowStyle Normal
 
 # Wait briefly for Ollama to start
 Start-Sleep -Seconds 5
