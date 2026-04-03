@@ -1,18 +1,50 @@
 <template>
   <div class="relative h-screen flex items-center justify-center bg-[#0c0e17]">
+
     <!-- Settings Drawer -->
     <div class="settings-drawer fixed top-0 left-0 w-full z-[60] bg-[#11131d] flex flex-col" id="settings-drawer">
-      <div class="flex-1 p-8 flex flex-col justify-center">
-        <div class="p-6 rounded-xl border border-outline-variant/30 bg-[#1c1f2b] flex items-center justify-center">
-          <span class="font-headline font-bold tracking-widest text-on-surface text-lg">AGENT</span>
+      <div class="flex-1 p-8 flex flex-col justify-center space-y-4">
+
+        <!-- Profile Dropdown -->
+        <div class="p-6 rounded-xl border border-outline-variant/30 bg-[#1c1f2b]">
+          <label class="font-headline font-bold tracking-widest text-on-surface text-lg block mb-2">
+            PROFILE
+          </label>
+          <select v-model="selectedProfile" class="w-full px-3 py-2 rounded bg-[#0c0e17] text-on-surface">
+            <option v-for="profile in profiles" :key="profile.id" :value="profile.id">
+              {{ profile.name }}
+            </option>
+          </select>
         </div>
-        <div class="p-6 rounded-xl border border-outline-variant/30 bg-[#1c1f2b] flex items-center justify-center">
-          <span class="font-headline font-bold tracking-widest text-on-surface text-lg">MODE</span>
+
+        <!-- Agent Dropdown -->
+        <div class="p-6 rounded-xl border border-outline-variant/30 bg-[#1c1f2b]">
+          <label class="font-headline font-bold tracking-widest text-on-surface text-lg block mb-2">
+            AGENT
+          </label>
+          <select v-model="selectedAgent" class="w-full px-3 py-2 rounded bg-[#0c0e17] text-on-surface">
+            <option v-for="agent in agents" :key="agent.id" :value="agent.id">
+              {{ agent.name }}
+            </option>
+          </select>
         </div>
-        <div class="p-6 rounded-xl border border-outline-variant/30 bg-[#1c1f2b] flex items-center justify-center">
-          <span class="font-headline font-bold tracking-widest text-on-surface text-lg">PROMPT</span>
+
+        <!-- Prompt Input -->
+        <div class="p-6 rounded-xl border border-outline-variant/30 bg-[#1c1f2b]">
+          <label class="font-headline font-bold tracking-widest text-on-surface text-lg block mb-2">
+            PROMPT
+          </label>
+          <input
+            v-model="userPrompt"
+            type="text"
+            placeholder="Type your prompt here..."
+            class="w-full px-3 py-2 rounded bg-[#0c0e17] text-on-surface focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
         </div>
+
       </div>
+
+      <!-- Drawer Handle -->
       <div class="settings-handle" @click="toggleSettings">
         <span class="material-symbols-outlined text-outline transition-transform duration-500" id="handle-icon">
           expand_more
@@ -33,15 +65,63 @@
         </template>
       </div>
     </div>
+
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, watch, nextTick, computed } from 'vue'
+import { store, setAgents, setProfiles } from './ProfileStore.js'
 
-const aiText = ref('Your AI output will appear here!')
+const selectedProfile = ref('')
+const selectedAgent = ref('')
+const userPrompt = ref('')
+
+const profiles = computed(() => store.profiles)
+const agents = computed(() => store.agents)
+
+// Fetch agents from backend
+async function fetchData() {
+  try {
+    const res = await fetch('http://localhost:8000/agents')
+    const data = await res.json()
+    setAgents(data)
+    setProfiles(data.map(a => ({ id: a.id, name: a.name })))
+  } catch (err) {
+    console.error('Fetch failed:', err)
+  }
+}
+
+onMounted(fetchData)
+
+// AI Crystal Ball
+const aiText = ref('')
 const aiTextRef = ref(null)
 
+async function updateAI() {
+  const agent = store.agents.find(a => a.id === selectedAgent.value)
+  if (!agent) return
+  try {
+    const res = await fetch('http://localhost:8000/run-agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        personality: agent.name,
+        instructions: agent.instructions || '',
+        task: userPrompt.value
+      })
+    })
+    const data = await res.json()
+    aiText.value = data.result
+  } catch (err) {
+    aiText.value = 'Error contacting AI'
+  }
+}
+
+// Update AI every 3 seconds
+setInterval(updateAI, 3000)
+
+// Fit font inside crystal ball
 function fitFont() {
   nextTick(() => {
     if (!aiTextRef.value) return
@@ -89,46 +169,21 @@ const formattedLines = computed(() => {
 </script>
 
 <style scoped>
-.settings-drawer {
-  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-  transform: translateY(calc(-100% + 48px));
-}
-.settings-drawer.is-open {
-  transform: translateY(0);
-}
-.settings-handle {
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
+.settings-drawer { transition: transform 0.6s cubic-bezier(0.4,0,0.2,1); transform: translateY(calc(-100%+48px)); }
+.settings-drawer.is-open { transform: translateY(0); }
+.settings-handle { height:48px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+
 .crystal-ball {
-  width: 280px;
-  height: 280px;
-  border-radius: 50%;
+  width:280px; height:280px; border-radius:50%;
   background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.15), rgba(255,255,255,0) 70%),
               radial-gradient(circle at 50% 50%, rgba(126,81,255,0.1), rgba(0,227,253,0.05));
-  box-shadow: 
-    inset 0 0 50px rgba(126,81,255,0.2),
-    inset 0 0 20px rgba(0,227,253,0.2),
-    0 0 60px rgba(126,81,255,0.1),
-    0 0 100px rgba(0,227,253,0.05);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(255,255,255,0.05);
-  backdrop-filter: blur(12px);
-  position: relative;
-  z-index: 10;
+  box-shadow: inset 0 0 50px rgba(126,81,255,0.2), inset 0 0 20px rgba(0,227,253,0.2), 0 0 60px rgba(126,81,255,0.1), 0 0 100px rgba(0,227,253,0.05);
+  display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.05); backdrop-filter: blur(12px); position:relative; z-index:10;
 }
-.inner-glow {
-  position: absolute;
-  width: 80%;
-  height: 80%;
-  background: radial-gradient(circle, rgba(126,81,255,0.2) 0%, rgba(0,227,253,0.15) 70%);
-  filter: blur(20px);
-}
-@keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
-.animate-float { animation: float 6s ease-in-out infinite; }
+.inner-glow { position:absolute; width:80%; height:80%; background:radial-gradient(circle, rgba(126,81,255,0.2) 0%, rgba(0,227,253,0.15) 70%); filter:blur(20px); }
+@keyframes float { 0%,100%{transform:translateY(0);}50%{transform:translateY(-15px);} }
+.animate-float { animation:float 6s ease-in-out infinite; }
+
+select,input { outline:none; border:1px solid rgba(255,255,255,0.2); }
+select:focus,input:focus { border-color:#7e51ff; box-shadow:0 0 0 2px rgba(126,81,255,0.3); }
 </style>

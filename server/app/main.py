@@ -1,25 +1,33 @@
-# app/main.py
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from app.models import AgentRequest, AgentResponse
-from app.agent import run_agent
+from pydantic import BaseModel
+from typing import Optional
+import uuid
 
-app = FastAPI(title="AI Agent Creator")
+# ----- Models -----
+class AgentCreate(BaseModel):
+    name: str
+    personality: str
+    instructions: str
+    task: str
+    id: Optional[str] = None  # optional now, backend generates if missing
 
-# Allow requests from frontend
+# ----- App -----
+app = FastAPI()
 app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # For demo purposes
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
 )
 
-@app.post("/run-agent", response_model=AgentResponse)
-def run(request: AgentRequest):
-    result = run_agent(request)
-    return {"result": result}
+agents_db = {}  # id -> agent dict
 
-@app.get("/")
-def root():
-    return {"message": "AI Agent Creator API is running"}
+# ----- CRUD -----
+@app.get("/agents")
+def list_agents():
+    return list(agents_db.values())
+
+@app.post("/agents")
+def create_agent(agent: AgentCreate):
+    agent_id = agent.id or str(uuid.uuid4())  # generate id if missing
+    agent_data = {"id": agent_id, **agent.dict(exclude={"id"})}
+    agents_db[agent_id] = agent_data
+    return agent_data
