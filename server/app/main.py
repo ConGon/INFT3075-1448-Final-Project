@@ -1,25 +1,26 @@
-# app/main.py
+# server/app/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.models import AgentRequest, AgentResponse
 from app.agent import run_agent
+from pydantic import BaseModel
 
-app = FastAPI(title="AI Agent Creator")
+app = FastAPI()
 
-# Allow requests from frontend
+# Enable CORS for Vue frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For demo purposes
+    allow_origins=["*"],  # change to your frontend origin in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-@app.post("/run-agent", response_model=AgentResponse)
-def run(request: AgentRequest):
-    result = run_agent(request)
-    return {"result": result}
+class AgentRequest(BaseModel):
+    personality: str
+    instructions: str
+    task: str
 
-@app.get("/")
-def root():
-    return {"message": "AI Agent Creator API is running"}
+@app.post("/run-agent")
+def run(data: AgentRequest):
+    result = run_agent(data.dict())
+    return result

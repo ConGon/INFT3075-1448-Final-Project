@@ -37,11 +37,43 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, nextTick, computed } from 'vue'
+import { ref, watch, nextTick, computed } from 'vue'
 
 const aiText = ref('Your AI output will appear here!')
 const aiTextRef = ref(null)
 
+// Settings drawer inputs
+const personality = ref('Strict teacher')
+const instructions = ref('Be concise')
+const task = ref('Explain recursion')
+
+// Function to call FastAPI backend
+let fetchTimeout = null
+async function fetchAIResponse() {
+  try {
+    const res = await fetch('http://localhost:8000/run-agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        personality: personality.value,
+        instructions: instructions.value,
+        task: task.value
+      })
+    })
+    const data = await res.json()
+    aiText.value = data.result || data.error || 'No response'
+  } catch (err) {
+    aiText.value = 'Error: ' + err.message
+  }
+}
+
+// Debounce so it doesn’t spam backend on every keystroke
+watch([personality, instructions, task], () => {
+  if (fetchTimeout) clearTimeout(fetchTimeout)
+  fetchTimeout = setTimeout(fetchAIResponse, 500) // 500ms delay
+})
+
+// Font fitting logic for crystal ball
 function fitFont() {
   nextTick(() => {
     if (!aiTextRef.value) return
@@ -60,7 +92,7 @@ function fitFont() {
 }
 
 watch(aiText, fitFont)
-onMounted(fitFont)
+onMounted(() => fitFont())
 
 function toggleSettings() {
   const drawer = document.getElementById('settings-drawer')
@@ -69,6 +101,7 @@ function toggleSettings() {
   icon.style.transform = isOpen ? 'rotate(180deg)' : 'rotate(0deg)'
 }
 
+// Format text for crystal ball
 const formattedLines = computed(() => {
   const words = aiText.value.split(' ')
   const lines = []

@@ -1,26 +1,27 @@
-# app/agent.py
+# server/app/agent.py
 import requests
-from app.models import AgentRequest
 
-OLLAMA_URL = "http://localhost:11434/api/generate"
-MODEL_NAME = "deepseek-r1:8b"
-
-def run_agent(data: AgentRequest) -> str:
-    # Build the prompt based on personality, instructions, and task
-    prompt = f"Personality: {data.personality}\nInstructions: {data.instructions}\nTask: {data.task}"
-
-    payload = {
-        "model": MODEL_NAME,
-        "prompt": prompt,
-        "stream": False
+def run_agent(data: dict):
+    """
+    data = {
+        "personality": "Strict teacher",
+        "instructions": "Be concise",
+        "task": "Explain recursion"
     }
-
+    """
+    prompt = f"Personality: {data['personality']}\nInstructions: {data['instructions']}\nTask: {data['task']}"
+    
     try:
-        response = requests.post(OLLAMA_URL, json=payload)
-        response.raise_for_status()
-        result = response.json()
-        # Ollama returns {"results": [{"content": "..."}]}
-        return result["results"][0]["content"]
+        response = requests.post(
+            "http://127.0.0.1:11434/api/generate",  # Ollama endpoint
+            json={
+                "model": "deepseek-r1:8b",
+                "prompt": prompt,
+                "stream": False
+            },
+            timeout=30
+        )
+        return response.json()
     except requests.exceptions.RequestException as e:
-        print("Error communicating with Ollama:", e)
-        return f"Error: {str(e)}"
+        # Always return a readable error
+        return {"error": str(e)}
