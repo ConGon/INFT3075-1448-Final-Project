@@ -70,7 +70,13 @@ Ensure the following are installed before getting started:
 
 ## 🔧 Installation & Setup
 
-### 1. Configure Ollama
+### Automatic method: 1. Open powershell as administrator:
+- Open windows powershell as administrator
+- Navitate to the root of the project folder
+- Type start then hit tab to run the start command.
+- Done
+
+### Manual Method: 1. Configure Ollama
 
 Pull the model and start the local inference server:
 
