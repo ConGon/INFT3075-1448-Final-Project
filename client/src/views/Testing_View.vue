@@ -43,6 +43,22 @@
           />
         </div>
 
+        <!-- Temperature Input -->
+        <div class="p-6 rounded-xl border border-outline-variant/30 bg-[#1c1f2b]">
+          <label class="font-headline font-bold tracking-widest text-on-surface text-lg block mb-2">
+            TEMPERATURE
+          </label>
+          <input
+            v-model="temperature"
+            type="number"
+            min="0"
+            max="1"
+            step="0.1"
+            placeholder="0.5"
+            class="w-full px-3 py-2 rounded bg-[#0c0e17] text-on-surface focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
+        </div>
+
         <!-- Ask Button -->
         <button
           @click="updateAI"
@@ -95,6 +111,7 @@ import { store, setAgents, setProfiles } from './ProfileStore.js'
 const selectedProfile = ref('')
 const selectedAgent = ref('')
 const userPrompt = ref('')
+const temperature = ref(0.5)
 const loading = ref(false)
 
 const profiles = computed(() => store.profiles)
@@ -130,7 +147,8 @@ async function updateAI() {
       body: JSON.stringify({
         personality: agent.personality || agent.name,
         instructions: agent.instructions || '',
-        task: userPrompt.value
+        task: userPrompt.value,
+        temperature: temperature.value
       })
     })
     const data = await res.json()
