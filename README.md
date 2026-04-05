@@ -70,50 +70,112 @@ Ensure the following are installed before getting started:
 
 ## 🔧 Installation & Setup
 
-### Automatic method: 1. Open powershell as administrator:
-- Open windows powershell as administrator
-- Navitate to the root of the project folder
-- Type start then hit tab to run the start command.
-- Done
+### 1. Start Ollama
 
-### Manual Method: 1. Configure Ollama
-
-Pull the model and start the local inference server:
-
+Pull the model (only needed once):
 ```bash
 ollama pull deepseek-r1:8b
-ollama serve
 ```
+
+Verify Ollama is running:
+```bash
+ollama list
+```
+
+> Only run `ollama serve` if Ollama is NOT already running.
+
+---
 
 ### 2. Backend Setup (FastAPI)
 
-```bash
+Open PowerShell:
+
+```powershell
 cd server
-python -m venv venv
+```
 
-# Activate (Windows)
-\venv\Scripts\activate
+#### Create virtual environment (Windows-safe)
+```powershell
+py -m venv venv
+```
 
-# Activate (macOS/Linux)
+#### Activate environment
+
+```powershell
+# PowerShell
+.\venv\Scripts\Activate.ps1
+
+# Command Prompt (alternative)
+venv\Scripts\activate.bat
+
+# macOS/Linux
 source venv/bin/activate
+```
 
+> If activation is blocked:
+```powershell
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+---
+
+#### Install dependencies
+```powershell
 pip install -r requirements.txt
+```
+
+---
+
+#### Run backend
+```powershell
 uvicorn app.main:app --reload
 ```
 
-> Backend available at: `http://localhost:8000`
+> Backend: http://localhost:8000
+
+---
 
 ### 3. Frontend Setup (Vue 3)
 
-Open a new terminal:
+Open a **new terminal**:
 
-```bash
+```powershell
 cd client
 npm install
 npm run dev
 ```
 
-> Frontend available at: `http://localhost:5173`
+> Frontend: http://localhost:5173
+
+---
+
+## ✅ Running Checklist
+
+- `ollama list` works → Ollama running  
+- Backend terminal shows FastAPI logs  
+- Frontend terminal shows Vite dev server  
+- Visiting `localhost:5173` loads the app  
+
+---
+
+## ⚠️ Common Issues
+
+**Port 11434 already in use**
+- Ollama is already running — do nothing
+
+**venv activation fails**
+- Ensure you used:
+  ```
+  py -m venv venv
+  ```
+- And activate with:
+  ```
+  .\venv\Scripts\Activate.ps1
+  ```
+
+**Wrong venv structure (bin instead of Scripts)**
+- Delete and recreate using `py -m venv venv`
+
 
 ## 🔄 How It Works
 
