@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 import uuid
-import httpx
+from app.agent import run_agent
 
 # ----- Models -----
 class AgentCreate(BaseModel):
@@ -23,6 +23,7 @@ class AgentRequest(BaseModel):
     personality: str
     instructions: str
     task: str
+    temperature: float = 0.5
 
 class AgentResponse(BaseModel):
     result: str
@@ -63,25 +64,7 @@ def delete_agent(agent_id: str):
     del agents_db[agent_id]
     return {"message": "Deleted"}
 
-# ----- AI Runner -----
-OLLAMA_URL = "http://localhost:11434/api/generate"
-MODEL_NAME = "deepseek-r1:8b"
-
-async def run_agent(personality: str, instructions: str, task: str) -> str:
-    prompt = f"Personality: {personality}\nInstructions: {instructions}\nTask: {task}"
-    payload = {"model": MODEL_NAME, "prompt": prompt, "stream": False}
-    try:
-        async with httpx.AsyncClient(timeout=360) as client:
-            response = await client.post(OLLAMA_URL, json=payload)
-            response.raise_for_status()
-            data = response.json()
-            return data.get("response", "No response from model.")
-    except httpx.TimeoutException:
-        return "Model timed out. Try a shorter prompt."
-    except Exception as e:
-        return f"Error communicating with Ollama: {e}"
-
 @app.post("/run-agent", response_model=AgentResponse)
-async def run(request: AgentRequest):
-    result = await run_agent(request.personality, request.instructions, request.task)
+def run(request: AgentRequest):
+    result = run_agent(request.personality, request.instructions, request.task, request.temperature)
     return {"result": result}
