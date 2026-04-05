@@ -5,18 +5,6 @@
     <div class="settings-drawer fixed top-0 left-0 w-full z-[60] bg-[#11131d] flex flex-col" id="settings-drawer">
       <div class="flex-1 p-8 flex flex-col justify-center space-y-4">
 
-        <!-- Profile Dropdown -->
-        <div class="p-6 rounded-xl border border-outline-variant/30 bg-[#1c1f2b]">
-          <label class="font-headline font-bold tracking-widest text-on-surface text-lg block mb-2">
-            PROFILE
-          </label>
-          <select v-model="selectedProfile" class="w-full px-3 py-2 rounded bg-[#0c0e17] text-on-surface">
-            <option v-for="profile in profiles" :key="profile.id" :value="profile.id">
-              {{ profile.name }}
-            </option>
-          </select>
-        </div>
-
         <!-- Agent Dropdown -->
         <div class="p-6 rounded-xl border border-outline-variant/30 bg-[#1c1f2b]">
           <label class="font-headline font-bold tracking-widest text-on-surface text-lg block mb-2">
@@ -89,8 +77,7 @@
       <div
         v-else
         ref="aiTextRef"
-        class="text-center text-purple-400 font-bold select-none"
-        style="line-height: 1.05; padding: 0 12px;"
+        class="ai-output text-center text-purple-400 font-bold"
       >
         <template v-if="aiText">
           <template v-for="(line, index) in formattedLines" :key="index">
@@ -164,13 +151,11 @@ async function updateAI() {
 function fitFont() {
   nextTick(() => {
     if (!aiTextRef.value) return
-    const ballSize = 280
-    let currentFontSize = 48
+    let currentFontSize = 20
     aiTextRef.value.style.fontSize = currentFontSize + 'px'
     while (
-      (aiTextRef.value.scrollWidth > ballSize * 0.85 ||
-        aiTextRef.value.scrollHeight > ballSize * 0.85) &&
-      currentFontSize > 8
+      aiTextRef.value.scrollWidth > aiTextRef.value.clientWidth &&
+      currentFontSize > 14
     ) {
       currentFontSize -= 1
       aiTextRef.value.style.fontSize = currentFontSize + 'px'
@@ -209,6 +194,14 @@ const formattedLines = computed(() => {
 </script>
 
 <style scoped>
+.ai-output {
+  position: relative;
+  width: 75%;
+  height: 75%;
+  overflow-x: hidden;
+  line-height: 1.2; 
+  scrollbar-width: none;
+}
 .settings-drawer {
   transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   transform: translateY(calc(-100% + 48px)); /* FIX: spaces around + */
@@ -217,13 +210,13 @@ const formattedLines = computed(() => {
 .settings-handle { height:48px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
 
 .crystal-ball {
-  width:280px; height:280px; border-radius:50%;
+  width:500px; height:500px; border-radius:50%;
   background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.15), rgba(255,255,255,0) 70%),
               radial-gradient(circle at 50% 50%, rgba(126,81,255,0.1), rgba(0,227,253,0.05));
   box-shadow: inset 0 0 50px rgba(126,81,255,0.2), inset 0 0 20px rgba(0,227,253,0.2), 0 0 60px rgba(126,81,255,0.1), 0 0 100px rgba(0,227,253,0.05);
   display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.05); backdrop-filter: blur(12px); position:relative; z-index:10;
 }
-.inner-glow { position:absolute; width:80%; height:80%; background:radial-gradient(circle, rgba(126,81,255,0.2) 0%, rgba(0,227,253,0.15) 70%); filter:blur(20px); }
+.inner-glow { position:absolute; width:50%; height:50%; background:radial-gradient(circle, rgba(126,81,255,0.2) 0%, rgba(0,227,253,0.15) 70%); filter:blur(100px); }
 @keyframes float { 0%,100%{transform:translateY(0);}50%{transform:translateY(-15px);} }
 .animate-float { animation:float 6s ease-in-out infinite; }
 
